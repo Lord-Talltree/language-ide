@@ -10,9 +10,9 @@ from pydantic import BaseModel
 
 router = APIRouter()
 
-# In-memory storage for prototype (replace with DB later)
-DOC_STORE = {}
-GRAPH_STORE = {}
+# Storage backend (persistent SQLite)
+from app.storage import get_storage
+storage = get_storage(backend="sqlite", db_path="lide.db")
 
 @router.get("/health")
 async def health_check():
@@ -45,36 +45,27 @@ registry.register(DiscoursePlugin())
 @router.post("/docs", response_model=DocResponse)
 async def create_doc(request: CreateDocRequest):
     doc_id = request.id or str(uuid.uuid4())
-    doc = {
-        "id": doc_id,
-        "text": request.text,
-        "lang": request.lang,
-        "created_at": datetime.utcnow().isoformat()
-    }
-    DOC_STORE[doc_id] = doc
-    return doc
+    return storage.save_document(doc_id, request.text, request.lang)
 
 @router.get("/docs/{doc_id}", response_model=DocResponse)
 async def get_doc(doc_id: str):
-    if doc_id not in DOC_STORE:
+    doc = storage.get_document(doc_id)
+    if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    return DOC_STORE[doc_id]
+    return doc
 
 @router.delete("/docs/{doc_id}")
 async def delete_doc(doc_id: str):
-    if doc_id in DOC_STORE:
-        del DOC_STORE[doc_id]
-    if doc_id in GRAPH_STORE:
-        del GRAPH_STORE[doc_id]
-    return {"status": "deleted"}
+    deleted = storage.delete_document(doc_id)
+    return {"status": "deleted" if deleted else "not_found"}
 
 @router.post("/analyze", response_model=AnalysisSummary)
 async def analyze_doc(request: AnalyzeRequest, background_tasks: BackgroundTasks):
-    if request.docId not in DOC_STORE:
+    doc = storage.get_document(request.docId)
+    if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     
     try:
-        doc = DOC_STORE[request.docId]
         from app.pipeline import get_pipeline
         pipeline = get_pipeline()
         
@@ -88,7 +79,7 @@ async def analyze_doc(request: AnalyzeRequest, background_tasks: BackgroundTasks
         interpreter = get_interpreter(options.processing_mode)
         graph = interpreter.interpret(graph)
         
-        GRAPH_STORE[request.docId] = graph.dict()
+        storage.save_graph(request.docId, graph)
         
         return AnalysisSummary(
             docId=request.docId,
@@ -103,18 +94,18 @@ async def analyze_doc(request: AnalyzeRequest, background_tasks: BackgroundTasks
 
 @router.get("/docs/{doc_id}/graph", response_model=MeaningGraph)
 async def get_graph(doc_id: str):
-    if doc_id not in GRAPH_STORE:
-        # If no graph exists, return empty one or 404? 
-        # For now, let's return 404 if analysis hasn't run
+    graph = storage.get_graph(doc_id)
+    if not graph:
         raise HTTPException(status_code=404, detail="Graph not found. Run /analyze first.")
-    return GRAPH_STORE[doc_id]
+    return graph
 
 @router.get("/docs/{doc_id}/logic")
 async def get_logic(doc_id: str):
-    if doc_id not in GRAPH_STORE:
+    graph = storage.get_graph(doc_id)
+    if not graph:
         raise HTTPException(status_code=404, detail="Graph not found. Run /analyze first.")
     
-    graph_data = GRAPH_STORE[doc_id]
+    graph_data = graph.dict()
     # Reconstruct objects
     from app.models import MeaningGraph, Assertion
     assertions = [Assertion(**a) for a in graph_data.get('assertions', [])]
