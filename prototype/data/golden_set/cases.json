@@ -1,0 +1,42 @@
+[
+    {
+        "id": "kafka_1",
+        "text": "Gregor Samsa awoke from uneasy dreams, he found himself transformed in his bed into a gigantic insect.",
+        "expected": {
+            "entities": [
+                "Gregor Samsa",
+                "insect",
+                "bed"
+            ],
+            "events": [
+                "awoke",
+                "awake",
+                "find",
+                "transform"
+            ],
+            "ambiguity": [
+                "AMB-FIG"
+            ],
+            "diagnostics": [
+                "uneasy"
+            ]
+        }
+    },
+    {
+        "id": "discourse_1",
+        "text": "I fell because I tripped.",
+        "expected": {
+            "events": [
+                "fall",
+                "trip"
+            ],
+            "edges": [
+                {
+                    "source": "trip",
+                    "target": "fall",
+                    "role": "Cause"
+                }
+            ]
+        }
+    }
+]

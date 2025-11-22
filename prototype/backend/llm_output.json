@@ -1,0 +1,245 @@
+{
+    "test_cases": {
+        "gregor": {
+            "nodes": [
+                {
+                    "id": "ent_gregor",
+                    "label": "Gregor Samsa",
+                    "type": "Entity",
+                    "properties": {
+                        "type": "PERSON"
+                    },
+                    "span": {
+                        "start": 0,
+                        "end": 12,
+                        "text": "Gregor Samsa"
+                    }
+                },
+                {
+                    "id": "evt_awoke",
+                    "label": "awoke",
+                    "type": "Event",
+                    "properties": {
+                        "tense": "PAST"
+                    },
+                    "span": {
+                        "start": 13,
+                        "end": 18,
+                        "text": "awoke"
+                    }
+                },
+                {
+                    "id": "ent_dreams",
+                    "label": "dreams",
+                    "type": "Entity",
+                    "properties": {
+                        "adjectives": [
+                            "uneasy"
+                        ]
+                    },
+                    "span": {
+                        "start": 24,
+                        "end": 37,
+                        "text": "uneasy dreams"
+                    }
+                },
+                {
+                    "id": "ent_he",
+                    "label": "he",
+                    "type": "Entity",
+                    "properties": {
+                        "type": "PRONOUN"
+                    },
+                    "span": {
+                        "start": 39,
+                        "end": 41,
+                        "text": "he"
+                    }
+                },
+                {
+                    "id": "evt_found",
+                    "label": "found",
+                    "type": "Event",
+                    "properties": {
+                        "tense": "PAST"
+                    },
+                    "span": {
+                        "start": 42,
+                        "end": 47,
+                        "text": "found"
+                    }
+                },
+                {
+                    "id": "ent_himself",
+                    "label": "himself",
+                    "type": "Entity",
+                    "properties": {
+                        "type": "PRONOUN"
+                    },
+                    "span": {
+                        "start": 48,
+                        "end": 55,
+                        "text": "himself"
+                    }
+                },
+                {
+                    "id": "evt_transformed",
+                    "label": "transformed",
+                    "type": "Event",
+                    "properties": {
+                        "tense": "PAST_PARTICIPLE"
+                    },
+                    "span": {
+                        "start": 56,
+                        "end": 67,
+                        "text": "transformed"
+                    }
+                },
+                {
+                    "id": "ent_bed",
+                    "label": "bed",
+                    "type": "Entity",
+                    "properties": {
+                        "owner": "his"
+                    },
+                    "span": {
+                        "start": 71,
+                        "end": 78,
+                        "text": "his bed"
+                    }
+                },
+                {
+                    "id": "ent_insect",
+                    "label": "insect",
+                    "type": "Entity",
+                    "properties": {
+                        "adjectives": [
+                            "gigantic"
+                        ]
+                    },
+                    "span": {
+                        "start": 86,
+                        "end": 101,
+                        "text": "gigantic insect"
+                    }
+                }
+            ],
+            "edges": [
+                {
+                    "source": "ent_gregor",
+                    "target": "evt_awoke",
+                    "role": "Agent"
+                },
+                {
+                    "source": "evt_awoke",
+                    "target": "ent_dreams",
+                    "role": "Source"
+                },
+                {
+                    "source": "ent_he",
+                    "target": "ent_gregor",
+                    "role": "SameAs"
+                },
+                {
+                    "source": "ent_he",
+                    "target": "evt_found",
+                    "role": "Agent"
+                },
+                {
+                    "source": "evt_found",
+                    "target": "ent_himself",
+                    "role": "Patient"
+                },
+                {
+                    "source": "ent_himself",
+                    "target": "ent_gregor",
+                    "role": "SameAs"
+                },
+                {
+                    "source": "ent_himself",
+                    "target": "evt_transformed",
+                    "role": "Theme"
+                },
+                {
+                    "source": "evt_transformed",
+                    "target": "ent_bed",
+                    "role": "Location"
+                },
+                {
+                    "source": "evt_transformed",
+                    "target": "ent_insect",
+                    "role": "Goal"
+                }
+            ]
+        },
+        "eyes": {
+            "nodes": [
+                {
+                    "id": "ent_gregor_1",
+                    "label": "Gregor",
+                    "type": "Entity",
+                    "properties": {
+                        "type": "PERSON"
+                    },
+                    "span": {
+                        "start": 0,
+                        "end": 6,
+                        "text": "Gregor"
+                    }
+                },
+                {
+                    "id": "prop_blue",
+                    "label": "blue",
+                    "type": "Property",
+                    "properties": {},
+                    "span": {
+                        "start": 11,
+                        "end": 15,
+                        "text": "blue"
+                    }
+                },
+                {
+                    "id": "ent_gregor_2",
+                    "label": "Gregor",
+                    "type": "Entity",
+                    "properties": {
+                        "type": "PERSON"
+                    },
+                    "span": {
+                        "start": 27,
+                        "end": 33,
+                        "text": "Gregor"
+                    }
+                },
+                {
+                    "id": "prop_brown",
+                    "label": "brown",
+                    "type": "Property",
+                    "properties": {},
+                    "span": {
+                        "start": 38,
+                        "end": 43,
+                        "text": "brown"
+                    }
+                }
+            ],
+            "edges": [
+                {
+                    "source": "ent_gregor_1",
+                    "target": "prop_blue",
+                    "role": "has_eye_color"
+                },
+                {
+                    "source": "ent_gregor_2",
+                    "target": "prop_brown",
+                    "role": "has_eye_color"
+                },
+                {
+                    "source": "ent_gregor_2",
+                    "target": "ent_gregor_1",
+                    "role": "SameAs"
+                }
+            ]
+        }
+    }
+}

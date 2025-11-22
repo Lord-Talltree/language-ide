@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MeaningGraph v0.2",
+  "description": "Schema for the Language IDE Meaning Graph (Map-first)",
+  "type": "object",
+  "required": ["nodes", "edges", "ambiguity_sets", "context_frames", "diagnostics", "provenance"],
+  "properties": {
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "label"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string", "enum": ["Entity", "Event", "Claim", "ContextFrame"] },
+          "label": { "type": "string" },
+          "span": { "$ref": "#/definitions/Span" },
+          "properties": { "type": "object" }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source", "target", "role"],
+        "properties": {
+          "source": { "type": "string" },
+          "target": { "type": "string" },
+          "role": { "type": "string", "enum": ["Agent", "Patient", "Instrument", "Time", "Location", "Cause", "Support", "Contradiction", "Refers_to", "Theme", "Experiencer"] },
+          "provenance": { "$ref": "#/definitions/Provenance" }
+        }
+      }
+    },
+    "ambiguity_sets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "dimension", "alternatives"],
+        "properties": {
+          "id": { "type": "string" },
+          "dimension": { "type": "string", "enum": ["AMB-LEX", "AMB-SYN", "AMB-REF", "AMB-SCOPE", "AMB-TIME", "AMB-MODAL", "AMB-PRAG", "AMB-FIG", "AMB-DISCOURSE", "AMB-WORLD"] },
+          "alternatives": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": { "type": "string" },
+                "weight": { "type": "number" },
+                "delta": { "type": "object" }
+              }
+            }
+          },
+          "provenance": { "$ref": "#/definitions/Provenance" }
+        }
+      }
+    },
+    "context_frames": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["frame_id", "frame_type"],
+        "properties": {
+          "frame_id": { "type": "string" },
+          "frame_type": { "type": "string", "enum": ["RealWorld", "Fiction", "Hypothesis", "FrameName"] },
+          "speaker_id": { "type": "string" },
+          "time_anchor": { "type": "string" },
+          "source_doc": { "type": "string" },
+          "modality_hint": { "type": "string" },
+          "local_definitions": { "type": "object" }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "severity", "message", "provenance"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["Ambiguity", "Contradiction", "Vagueness", "KnowledgeGap"] },
+          "severity": { "type": "string", "enum": ["Info", "Warning", "Error"] },
+          "message": { "type": "string" },
+          "provenance": { "$ref": "#/definitions/Provenance" }
+        }
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Provenance" }
+    }
+  },
+  "definitions": {
+    "Span": {
+      "type": "object",
+      "properties": {
+        "start": { "type": "integer" },
+        "end": { "type": "integer" },
+        "text": { "type": "string" }
+      }
+    },
+    "Provenance": {
+      "type": "object",
+      "required": ["engine_id", "engine_version"],
+      "properties": {
+        "source_doc": { "type": "string" },
+        "sentence_index": { "type": "integer" },
+        "span": { "$ref": "#/definitions/Span" },
+        "engine_id": { "type": "string" },
+        "engine_version": { "type": "string" },
+        "confidence": { "type": "number" },
+        "receipts": { "type": "array", "items": { "type": "object" } }
+      }
+    }
+  }
+}

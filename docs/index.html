@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L-ide: A GPS Protocol for AI Conversations</title>
+    <meta name="description"
+        content="An open protocol that turns AI conversations into queryable, visual maps. Local-first memory system for AI.">
+    <meta name="author" content="Ruben Kai Baden">
+    <meta name="date" content="2025-11-22">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        article {
+            background: white;
+            padding: 40px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+
+        h3 {
+            color: #7f8c8d;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: "Monaco", "Menlo", monospace;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        pre code {
+            background: none;
+            color: inherit;
+        }
+
+        .meta {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            margin-bottom: 30px;
+        }
+
+        .tldr {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .license {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <article>
+        <h1>L-ide: A GPS Protocol for AI Conversations</h1>
+
+        <div class="meta">
+            Published: November 22, 2025 | Author: Ruben Kai Baden
+        </div>
+
+        <div class="tldr">
+            <strong>TL;DR:</strong> I built an open protocol that turns AI conversations into queryable, visual maps.
+            Think "Git for chat" - it tracks what was discussed, what's being built, and catches contradictions before
+            they become problems.
+        </div>
+
+        <h2>The Problem: AI Memory is Broken</h2>
+
+        <p>If you've used ChatGPT or Claude for anything complex (writing code, planning a project, drafting a
+            document), you've hit the wall: <strong>after 20-30 messages, the AI forgets.</strong></p>
+
+        <p>Current "solutions" are inadequate:</p>
+        <ul>
+            <li><strong>Vector stores (RAG)</strong>: Black boxes. You can't SEE what the AI remembers.</li>
+            <li><strong>Copy-pasting context</strong>: Manual, error-prone, breaks flow.</li>
+            <li><strong>Cloud memory services</strong>: Privacy risks, vendor lock-in, opaque.</li>
+        </ul>
+
+        <p>What we need is a <strong>persistent, queryable, visual map</strong> of the conversation - for both humans
+            and AI.</p>
+
+        <h2>The Solution: L-ide Protocol</h2>
+
+        <p>L-ide is a <strong>local-first protocol</strong> that automatically builds a "Meaning Graph" from AI
+            conversations. It consists of three core innovations:</p>
+
+        <h3>1. The Meaning Graph Schema</h3>
+
+        <p>Instead of storing conversations as flat text, L-ide extracts structured meaning:</p>
+
+        <pre><code>{
+  "nodes": [
+    { "id": "evt_1", "type": "Event", "label": "build" },
+    { "id": "goal_2", "type": "Goal", "label": "deploy" },
+    { "id": "ent_3", "type": "Entity", "label": "database" }
+  ],
+  "edges": [
+    { "source": "evt_1", "target": "ent_3", "role": "Patient" },
+    { "source": "goal_2", "target": "evt_1", "role": "Sequence" }
+  ]
+}</code></pre>
+
+        <p><strong>Key insight</strong>: Conversations have <strong>structure</strong> (goals, events, entities,
+            relationships). By making this explicit, we enable:</p>
+        <ul>
+            <li><strong>Navigation</strong>: "What was the original goal?"</li>
+            <li><strong>Verification</strong>: "Did I contradict myself?"</li>
+            <li><strong>Resumption</strong>: "What was I working on last week?"</li>
+        </ul>
+
+        <h3>2. The Interceptor Pattern</h3>
+
+        <p>The core architecture is a <strong>sidecar</strong> that sits between the user and the AI:</p>
+
+        <pre><code>User → [L-ide Interceptor] → AI Agent
+         ↓                           ↓
+   Extract Meaning            Check Consistency
+         ↓                           ↓
+   Update Graph ← Run Checkers ← Response</code></pre>
+
+        <p><strong>The critical innovation</strong>: The Interceptor runs <strong>BEFORE</strong> the AI responds. If it
+            detects a problem (ambiguity, contradiction), it injects a warning:</p>
+
+        <pre><code>User: "Make it blue."
+Interceptor: [WARNING: Ambiguous pronoun 'it']
+AI: "Which part should be blue? The button or background?"</code></pre>
+
+        <h3>3. The Checker Algorithms</h3>
+
+        <p>L-ide uses <strong>pluggable checker algorithms</strong> to detect issues:</p>
+
+        <h4>ContinuityChecker</h4>
+        <p>Detects contradictions across time: "The car is red" → later → "The car is blue" = CONFLICT</p>
+
+        <h4>AmbiguityChecker</h4>
+        <p>Flags vague terms: Pronouns without clear referents ("it", "this") trigger warnings</p>
+
+        <h4>DiscourseChecker</h4>
+        <p>Extracts narrative structure: "I fell BECAUSE I tripped" → creates CAUSE edge</p>
+
+        <h2>Why This Matters: The Three Use Cases</h2>
+
+        <h3>1. For Developers: "Stop Repeating Yourself"</h3>
+        <p>Building a feature with ChatGPT. It suggests something that conflicts with Message 3. L-ide catches it:</p>
+        <pre><code>[WARNING: Contradiction. You decided PostgreSQL, 
+but this plan assumes MongoDB. Clarify database.]</code></pre>
+
+        <h3>2. For Writers: "Track Your World"</h3>
+        <p>Novel character has blue eyes in Ch1, brown in Ch10. L-ide flags the continuity error.</p>
+
+        <h3>3. For Teams: "Audit Your AI"</h3>
+        <p>Customer service bot promises a refund, but policy forbids it. L-ide blocks the violation.</p>
+
+        <h2>The Architecture: Protocol-First</h2>
+
+        <p>L-ide is a <strong>protocol</strong>, not a monolithic app:</p>
+
+        <ol>
+            <li><strong>Backend</strong> (FastAPI + SQLite): Processes text, builds graph, stores sessions</li>
+            <li><strong>Clients</strong> (thin wrappers): CLI, Chrome Extension, VSCode, API integration</li>
+        </ol>
+
+        <p>Key principle: The backend holds ALL logic. Clients are dumb display layers.</p>
+
+        <p>Benefits:</p>
+        <ul>
+            <li><strong>Privacy</strong>: Runs locally. Data never leaves your machine.</li>
+            <li><strong>Portability</strong>: Works with ANY AI (ChatGPT, Claude, local models)</li>
+            <li><strong>Extensibility</strong>: Community can build clients</li>
+        </ul>
+
+        <h2>Prior Art & Novelty</h2>
+
+        <p><strong>What already exists:</strong></p>
+        <ul>
+            <li>Knowledge graphs (Wikidata) - static, not conversation-derived</li>
+            <li>Semantic parsers (AMR) - research tools, not production</li>
+            <li>RAG systems (LangChain) - vector-based, not graph-based</li>
+        </ul>
+
+        <p><strong>What's novel in L-ide:</strong></p>
+        <ol>
+            <li>Real-time graph construction from conversation</li>
+            <li>Interceptor architecture (warnings before AI responds)</li>
+            <li>Pluggable checker system</li>
+            <li>Local-first protocol</li>
+        </ol>
+
+        <h2>Open Source & Licensing</h2>
+
+        <p>L-ide is <strong>dual-licensed</strong>:</p>
+
+        <ul>
+            <li><strong>Core protocol</strong> (MIT): Free, open source - Graph schema, pipeline, basic NLP</li>
+            <li><strong>Pro checkers</strong> (Proprietary): Paid license ($49 one-time) - Advanced algorithms</li>
+        </ul>
+
+        <p>This enables community growth while sustaining development.</p>
+
+        <h2>Current Status</h2>
+
+        <p><strong>What works today</strong> (v0.1):</p>
+        <ul>
+            <li>Full Meaning Graph extraction</li>
+            <li>All three core checkers</li>
+            <li>Dashboard UI with visualization</li>
+            <li>Session persistence</li>
+        </ul>
+
+        <p><strong>GitHub</strong>: <a
+                href="https://github.com/surfly/LivePerson-Integration">github.com/surfly/LivePerson-Integration</a></p>
+
+        <h2>Conclusion</h2>
+
+        <p>AI memory remains broken. L-ide solves this with a visual, queryable graph + proactive verification +
+            local-first architecture.</p>
+
+        <p>This is git for conversations. Just as git made collaboration on code manageable, L-ide makes collaboration
+            with AI reliable.</p>
+
+        <div class="license">
+            <p><strong>Published</strong>: November 22, 2025 | <strong>Author</strong>: Ruben Kai Baden</p>
+            <p><strong>License</strong>: This technical description is published as prior art. Core concepts are free to
+                use under MIT License. Implementation details are copyright Ruben Kai Baden 2025.</p>
+            <p>Discuss on: <a href="https://github.com/surfly/LivePerson-Integration">GitHub</a></p>
+        </div>
+    </article>
+</body>
+
+</html>
