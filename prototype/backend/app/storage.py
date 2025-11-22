@@ -205,6 +205,37 @@ class SQLiteStorage(StorageBackend):
             created_at=row["created_at"]
         ) for row in rows]
     
+    def update_session_name(self, doc_id: str, name: str) -> bool:
+        """Update the friendly name for a session (stored as document id)."""
+        # For MVP, we'll just use doc_id as name. Later can add a sessions table.
+        # For now, return True if doc exists
+        doc = self.get_document(doc_id)
+        return doc is not None
+    
+    def get_session_metadata(self, doc_id: str):
+        """Get enriched metadata for a session."""
+        from app.session_models import SessionMetadata
+        
+        doc = self.get_document(doc_id)
+        graph = self.get_graph(doc_id)
+        
+        if not doc:
+            return None
+        
+        node_count = len(graph.nodes) if graph else 0
+        edge_count = len(graph.edges) if graph else 0
+        diagnostic_count = len(graph.diagnostics) if graph else 0
+        
+        return SessionMetadata(
+            id=doc.id,
+            name=doc.id,  # MVP: use ID as name
+            created_at=doc.created_at,
+            updated_at=doc.created_at,  # TODO: track separately
+            node_count=node_count,
+            edge_count=edge_count,
+            diagnostic_count=diagnostic_count
+        )
+    
     def close(self):
         """Close the database connection."""
         self.conn.close()

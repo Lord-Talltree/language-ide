@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import router as api_router
+from app.session_api import router as session_api_router
 
 app = FastAPI(
     title="Language IDE API",
@@ -26,6 +27,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix="/v0")
+app.include_router(session_api_router, prefix="/v0")
 
 @app.get("/")
 async def root():
