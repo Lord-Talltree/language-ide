@@ -15,6 +15,7 @@ from app.models import MeaningGraph
 from app.checkers.continuity import ContinuityChecker
 from app.checkers.ambiguity import AmbiguityChecker
 from app.checkers.oxymoron import OxymoronChecker
+from app.checkers.cross_message import CrossMessageContradictionChecker
 
 router = APIRouter(prefix="/sessions", tags=["session-analysis"])
 storage = get_storage()
@@ -69,17 +70,20 @@ async def analyze_session_message(session_id: str, request: AnalyzeMessageReques
     continuity_checker = ContinuityChecker()
     ambiguity_checker = AmbiguityChecker()
     oxymoron_checker = OxymoronChecker()
+    cross_message_checker = CrossMessageContradictionChecker()
     
     # Check for contradictions across the entire conversation
     continuity_diagnostics = continuity_checker.check(accumulated_graph)
     ambiguity_diagnostics = ambiguity_checker.check(accumulated_graph)
     oxymoron_diagnostics = oxymoron_checker.check(accumulated_graph)
+    cross_message_diagnostics = cross_message_checker.check(accumulated_graph)
     
     # Combine all diagnostics
     all_diagnostics = (
         continuity_diagnostics + 
         ambiguity_diagnostics + 
-        oxymoron_diagnostics
+        oxymoron_diagnostics +
+        cross_message_diagnostics
     )
     
     # Update accumulated graph with diagnostics
