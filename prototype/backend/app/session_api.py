@@ -12,7 +12,7 @@ from app.session_models import SessionMetadata, CreateSessionRequest, UpdateSess
 from app.storage import get_storage
 from app.models import MeaningGraph
 
-router = APIRouter(prefix="/v0/sessions", tags=["sessions"])
+router = APIRouter(prefix="/sessions", tags=["sessions"])
 storage = get_storage()
 
 

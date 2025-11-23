@@ -70,7 +70,7 @@ async def analyze_doc(request: AnalyzeRequest, background_tasks: BackgroundTasks
         pipeline = get_pipeline()
         
         # Run pipeline (synchronously for now for simplicity, can be backgrounded)
-        graph = pipeline.process(doc["text"], request.docId)
+        graph = pipeline.process(doc.text, request.docId)
         
         # Apply Interpreter
         from app.interpreters import get_interpreter
