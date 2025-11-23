@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from app.storage import get_storage
-from app.pipeline import analyze  # Fixed: was analyze_text
+from app.pipeline import get_pipeline
 from app.models import MeaningGraph
 from app.checkers.continuity import ContinuityChecker
 from app.checkers.ambiguity import AmbiguityChecker
@@ -51,7 +51,8 @@ async def analyze_session_message(session_id: str, request: AnalyzeMessageReques
     )
     
     # Run pipeline on new message
-    new_graph = analyze(request.text, request.lang)
+    pipeline = get_pipeline()
+    new_graph = pipeline.process(request.text, request.lang)
     storage.save_graph(doc_response.id, new_graph)
     
     # Add message to session history
