@@ -127,6 +127,25 @@ class SQLiteStorage(StorageBackend):
             )
         """)
         
+        # Session messages table - NEW for session-aware analysis
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS session_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                message_text TEXT NOT NULL,
+                doc_id TEXT,
+                created_at TEXT NOT NULL,
+                sequence_num INTEGER NOT NULL,
+                FOREIGN KEY (doc_id) REFERENCES documents(id) ON DELETE SET NULL
+            )
+        """)
+        
+        # Index for efficient session message retrieval
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_session_messages_session 
+            ON session_messages(session_id, sequence_num)
+        """)
+        
         self.conn.commit()
     
     def save_document(self, doc_id: str, text: str, lang: str) -> DocResponse:
@@ -234,6 +253,89 @@ class SQLiteStorage(StorageBackend):
             node_count=node_count,
             edge_count=edge_count,
             diagnostic_count=diagnostic_count
+        )
+    
+    def add_session_message(self, session_id: str, message_text: str, doc_id: Optional[str] = None) -> int:
+        """Add a message to a session's history. Returns sequence number."""
+        cursor = self.conn.cursor()
+        
+        # Get next sequence number
+        cursor.execute("""
+            SELECT COALESCE(MAX(sequence_num), 0) + 1 
+            FROM session_messages 
+            WHERE session_id = ?
+        """, (session_id,))
+        seq_num = cursor.fetchone()[0]
+        
+        created_at = datetime.utcnow().isoformat()
+        
+        cursor.execute("""
+            INSERT INTO session_messages (session_id, message_text, doc_id, created_at, sequence_num)
+            VALUES (?, ?, ?, ?, ?)
+        """, (session_id, message_text, doc_id, created_at, seq_num))
+        
+        self.conn.commit()
+        return seq_num
+    
+    def get_session_messages(self, session_id: str):
+        """Get all messages for a session in order."""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT message_text, doc_id, created_at, sequence_num
+            FROM session_messages
+            WHERE session_id = ?
+            ORDER BY sequence_num ASC
+        """, (session_id,))
+        
+        messages = []
+        for row in cursor.fetchall():
+            messages.append({
+                "text": row["message_text"],
+                "doc_id": row["doc_id"],
+                "created_at": row["created_at"],
+                "sequence_num": row["sequence_num"]
+            })
+        return messages
+    
+    def get_accumulated_graph(self, session_id: str) -> Optional[MeaningGraph]:
+        """Build accumulated graph from all session messages."""
+        from app.models import Node, Edge, Diagnostic
+        
+        messages = self.get_session_messages(session_id)
+        if not messages:
+            return None
+        
+        # Accumulate all nodes and edges
+        all_nodes = []
+        all_edges = []
+        all_diagnostics = []
+        node_ids_seen = set()
+        edge_ids_seen = set()
+        
+        for msg in messages:
+            if msg["doc_id"]:
+                graph = self.get_graph(msg["doc_id"])
+                if graph:
+                    # Add nodes (dedupe by ID)
+                    for node in graph.nodes:
+                        if node.id not in node_ids_seen:
+                            all_nodes.append(node)
+                            node_ids_seen.add(node.id)
+                    
+                    # Add edges (dedupe by ID)
+                    for edge in graph.edges:
+                        edge_id = f"{edge.source}-{edge.role}-{edge.target}"
+                        if edge_id not in edge_ids_seen:
+                            all_edges.append(edge)
+                            edge_ids_seen.add(edge_id)
+                    
+                    # Accumulate diagnostics
+                    all_diagnostics.extend(graph.diagnostics)
+        
+        return MeaningGraph(
+            nodes=all_nodes,
+            edges=all_edges,
+            diagnostics=all_diagnostics
         )
     
     def close(self):
