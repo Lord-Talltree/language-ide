@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>L-ide Extension</title>
+    <style>
+        body {
+            width: 320px;
+            padding: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 18px;
+            margin: 0 0 16px 0;
+            color: #1a1a1a;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+
+        .status.active {
+            background: #e8f5e9;
+            border: 1px solid #4caf50;
+            color: #2e7d32;
+        }
+
+        .status.inactive {
+            background: #fff3e0;
+            border: 1px solid #ff9800;
+            color: #e65100;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 8px;
+            transition: background 0.2s;
+        }
+
+        button.primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        button.primary:hover {
+            background: #2563eb;
+        }
+
+        button.danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        button.danger:hover {
+            background: #dc2626;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .info {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .session-info {
+            font-size: 12px;
+            color: #475569;
+            padding: 8px;
+            background: #f1f5f9;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            word-break: break-all;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #64748b;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧭 L-ide</h1>
+
+    <div id="loading" class="loading">
+        Loading...
+    </div>
+
+    <div id="content" style="display: none;">
+        <div id="status" class="status inactive">
+            ⏸️ Monitoring disabled
+        </div>
+
+        <div id="session-info" class="session-info" style="display: none;">
+            Session: <span id="session-id">-</span>
+        </div>
+
+        <button id="start-btn" class="primary">
+            Start Monitoring
+        </button>
+
+        <button id="stop-btn" class="danger" style="display: none;">
+            Stop Monitoring
+        </button>
+
+        <button id="export-btn" style="background: #64748b; color: white; display: none;">
+            Export Session
+        </button>
+
+        <div class="info">
+            <strong>How it works:</strong><br>
+            L-ide monitors your AI conversations and warns you about contradictions, ambiguities, and context issues in
+            real-time.
+            <br><br>
+            <strong>Backend:</strong> http://localhost:8000
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>

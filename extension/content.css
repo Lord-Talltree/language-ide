@@ -1,0 +1,56 @@
+/* L-ide Warning Styles */
+
+.lide-warning {
+    margin: 12px 0;
+    padding: 16px;
+    background: linear-gradient(135deg, #fff5e6 0%, #ffe8cc 100%);
+    border-left: 4px solid #ff9800;
+    border-radius: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.1);
+}
+
+.lide-warning-header {
+    font-weight: bold;
+    color: #e65100;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.lide-errors {
+    margin-bottom: 8px;
+}
+
+.lide-error {
+    color: #c62828;
+    padding: 6px 0;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.lide-warnings {
+    margin-top: 8px;
+}
+
+.lide-warning-item {
+    color: #f57c00;
+    padding: 6px 0;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* Animation for new warnings */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.lide-warning {
+    animation: slideIn 0.3s ease-out;
+}
