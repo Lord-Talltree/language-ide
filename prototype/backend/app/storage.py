@@ -262,7 +262,9 @@ def get_storage(backend: str = "sqlite", **kwargs) -> StorageBackend:
         if backend == "memory":
             _storage_instance = InMemoryStorage()
         elif backend == "sqlite":
-            db_path = kwargs.get("db_path", "lide.db")
+            import os
+            # Use env var for Docker compatibility, fallback to local path
+            db_path = kwargs.get("db_path") or os.getenv("DATABASE_PATH", "lide.db")
             _storage_instance = SQLiteStorage(db_path=db_path)
         else:
             raise ValueError(f"Unknown backend: {backend}")
