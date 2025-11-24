@@ -1,279 +1,195 @@
 import React, { useState, useEffect, useRef } from 'react';
 import GraphView from '../components/GraphView';
-import { MeaningGraph, Node } from '../types';
+import { api } from '../api';
+import { MeaningGraph } from '../types';
 
-interface ChatMessage {
-    role: 'user' | 'agent' | 'system';
-    content: string;
-    docId?: string; // Link to backend document
-}
-
-interface SessionState {
-    graph: MeaningGraph;
-    history: { text: string; doc_id: string }[];
-}
-
-interface HighlightedSpan {
-    docId: string;
-    start: number;
-    end: number;
+interface Message {
+    id: string;
+    text: string;
+    diagnostics?: any[];
+    timestamp: string;
 }
 
 export const Dashboard: React.FC = () => {
-    const [graph, setGraph] = useState<MeaningGraph | null>(null);
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [sessionId, setSessionId] = useState<string | null>(null);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
+    const [graph, setGraph] = useState<MeaningGraph | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [highlightedSpan, setHighlightedSpan] = useState<HighlightedSpan | null>(null);
+    const [activeView, setActiveView] = useState<'conversation' | 'graph'>('conversation');
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const fetchSession = async () => {
-        try {
-            const res = await fetch('http://localhost:8000/v0/session');
-            const data = await res.json();
-            setGraph(data.graph);
-
-            // Sync docIds from history to local messages
-            // This is a heuristic sync since we don't store full chat state in backend yet
-            const history = data.history as { text: string; doc_id: string }[];
-
-            setMessages(prevMessages => {
-                const newMessages = [...prevMessages];
-                let historyIndex = 0;
-
-                for (let i = 0; i < newMessages.length; i++) {
-                    if (newMessages[i].role === 'user') {
-                        // If this user message matches the current history item
-                        if (historyIndex < history.length && newMessages[i].content === history[historyIndex].text) {
-                            newMessages[i].docId = history[historyIndex].doc_id;
-                            historyIndex++;
-                        }
-                    }
-                }
-                return newMessages;
-            });
-
-        } catch (e) {
-            console.error("Failed to fetch session", e);
-        }
-    };
-
-    // Poll for graph updates
+    // Create session on mount
     useEffect(() => {
-        fetchSession();
-        const interval = setInterval(fetchSession, 2000);
-        return () => clearInterval(interval);
+        const initSession = async () => {
+            try {
+                const session = await api.createSession('');
+                setSessionId(session.id);
+            } catch (e) {
+                console.error('Failed to create session:', e);
+            }
+        };
+        initSession();
     }, []);
 
-    const sendMessage = async () => {
-        if (!input.trim()) return;
+    // Auto-scroll to bottom when messages change
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
-        const userMsg = input;
+    const sendMessage = async () => {
+        if (!input.trim() || !sessionId || isLoading) return;
+
+        const userMessage = input.trim();
         setInput('');
-        setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
         setIsLoading(true);
 
         try {
-            const res = await fetch('http://localhost:8000/v0/chat/message', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: userMsg })
-            });
-            const data = await res.json();
+            // Send message to session-aware endpoint
+            const response = await api.sendSessionMessage(sessionId, userMessage);
 
-            if (data.warning) {
-                setMessages(prev => [
-                    ...prev,
-                    { role: 'system', content: data.warning },
-                    { role: 'agent', content: data.response }
-                ]);
-            } else {
-                setMessages(prev => [...prev, { role: 'agent', content: data.response }]);
+            // Add message with diagnostics
+            const newMessage: Message = {
+                id: response.message_id || Date.now().toString(),
+                text: userMessage,
+                diagnostics: response.diagnostics || [],
+                timestamp: new Date().toISOString()
+            };
+
+            setMessages(prev => [...prev, newMessage]);
+
+            // Update graph with accumulated state
+            if (response.graph) {
+                setGraph(response.graph);
             }
-
-            // Refresh graph immediately
-            fetchSession();
-
         } catch (e) {
-            console.error("Chat error", e);
-            setMessages(prev => [...prev, { role: 'system', content: "Error communicating with agent." }]);
+            console.error('Error sending message:', e);
         } finally {
             setIsLoading(false);
         }
     };
 
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
-
-    const handleNodeClick = (node: Node) => {
-        if (!node.span) return;
-
-        // Find which doc this node belongs to
-        // Node -> properties.frame_id -> ContextFrame -> source_doc
-        const frameId = node.properties?.frame_id;
-        if (!frameId || !graph) return;
-
-        const frame = graph.context_frames.find(f => f.frame_id === frameId);
-        if (frame && frame.source_doc) {
-            setHighlightedSpan({
-                docId: frame.source_doc,
-                start: node.span.start,
-                end: node.span.end
-            });
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
         }
-    };
-
-    const renderMessageContent = (msg: ChatMessage) => {
-        if (msg.role !== 'user' || !msg.docId || !highlightedSpan || msg.docId !== highlightedSpan.docId) {
-            return msg.content;
-        }
-
-        // Apply highlighting
-        const { start, end } = highlightedSpan;
-        const text = msg.content;
-
-        if (start >= text.length) return text;
-
-        const before = text.substring(0, start);
-        const highlight = text.substring(start, end);
-        const after = text.substring(end);
-
-        return (
-            <span>
-                {before}
-                <span className="bg-yellow-400 text-black font-bold px-1 rounded">{highlight}</span>
-                {after}
-            </span>
-        );
-    };
-
-    const handleResolve = (warningText: string) => {
-        // Try to extract the vague term from quotes, e.g. "Vague term 'file'"
-        const match = warningText.match(/'([^']+)'/);
-        const term = match ? match[1] : 'it';
-
-        setInput(`I meant that '${term}' refers to `);
-
-        // Focus input (optional, but good UX)
-        // We can add a ref to the input later if needed
     };
 
     return (
-        <div className="flex h-screen bg-gray-900 text-white overflow-hidden font-sans">
-            {/* Header / Toolbar (Optional, for future) */}
+        <div className="dashboard">
+            {/* Header */}
+            <div className="dashboard-header">
+                <h1>L-ide - Language GPS</h1>
+                <div className="view-toggle">
+                    <button
+                        className={activeView === 'conversation' ? 'active' : ''}
+                        onClick={() => setActiveView('conversation')}
+                    >
+                        💬 Conversation
+                    </button>
+                    <button
+                        className={activeView === 'graph' ? 'active' : ''}
+                        onClick={() => setActiveView('graph')}
+                    >
+                        🗺️ Map
+                    </button>
+                </div>
+            </div>
 
-            {/* Main Workspace */}
-            <div className="flex flex-1 h-full">
-
-                {/* Left: Chat Panel (30%) */}
-                <div className="w-[30%] flex flex-col border-r border-gray-700 bg-gray-800/50">
-                    <div className="p-3 border-b border-gray-700 bg-gray-800 flex justify-between items-center">
-                        <div>
-                            <h2 className="text-sm font-bold text-gray-200 uppercase tracking-wider">Conversation</h2>
-                            <p className="text-[10px] text-gray-400">Interceptor Active</p>
-                        </div>
-                        <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" title="System Online"></div>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                        {messages.length === 0 && (
-                            <div className="text-gray-500 text-center mt-10 text-sm">
-                                Start chatting to build the map...
-                            </div>
-                        )}
-                        {messages.map((msg, i) => {
-                            const isSystemWarning = msg.content.startsWith('[SYSTEM WARNING:');
-
-                            if (isSystemWarning) {
-                                const warningText = msg.content.replace('[SYSTEM WARNING:', '').replace(']', '').trim();
-                                return (
-                                    <div key={i} className="flex flex-col items-start w-full my-2 animate-fade-in">
-                                        <div className="max-w-[95%] p-3 rounded-lg text-sm shadow-md bg-orange-900/20 border border-orange-500/50 text-orange-200 flex gap-3 items-start">
-                                            <div className="text-lg mt-0.5">⚠️</div>
-                                            <div className="flex-1">
-                                                <div className="font-bold text-orange-400 mb-1 text-xs uppercase tracking-wider">Safety Alert</div>
-                                                <div className="leading-relaxed">{warningText}</div>
-                                                <button
-                                                    onClick={() => handleResolve(warningText)}
-                                                    className="mt-2 text-[10px] bg-orange-500/10 hover:bg-orange-500/20 px-2 py-1 rounded border border-orange-500/30 transition-colors text-orange-300 flex items-center gap-1"
-                                                >
-                                                    <span>🔧</span> Resolve Ambiguity
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <span className="text-[10px] text-gray-600 mt-1 ml-2 font-mono">INTERCEPTOR::AMBIGUITY_CHECK</span>
+            {/* Main Content */}
+            <div className="dashboard-content">
+                {activeView === 'conversation' ? (
+                    <div className="conversation-view">
+                        {/* Messages */}
+                        <div className="messages-container">
+                            {messages.length === 0 ? (
+                                <div className="empty-state">
+                                    <div className="empty-icon">🗺️</div>
+                                    <h2>Start Your Conversation</h2>
+                                    <p>Type a message to begin building your knowledge map</p>
+                                    <div className="example-prompts">
+                                        <button onClick={() => setInput("I want to build a fast application")}>
+                                            Try: "I want to build a fast application"
+                                        </button>
                                     </div>
-                                );
-                            }
-
-                            return (
-                                <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                                    <div className={`max-w-[90%] p-3 rounded-lg text-sm shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white' :
-                                        msg.role === 'system' ? 'bg-red-900/30 border border-red-500/50 text-red-200' :
-                                            'bg-gray-700 text-gray-200'
-                                        }`}>
-                                        {renderMessageContent(msg)}
-                                    </div>
-                                    <span className="text-[10px] text-gray-500 mt-1 capitalize opacity-70">{msg.role}</span>
                                 </div>
-                            );
-                        })}
-                        <div ref={messagesEndRef} />
-                    </div>
+                            ) : (
+                                <>
+                                    {messages.map((msg, idx) => (
+                                        <div key={msg.id} className="message-wrapper">
+                                            <div className="message user-message">
+                                                <div className="message-content">{msg.text}</div>
+                                                <div className="message-meta">
+                                                    Message {idx + 1} • {new Date(msg.timestamp).toLocaleTimeString()}
+                                                </div>
+                                            </div>
 
-                    <div className="p-3 bg-gray-800 border-t border-gray-700">
-                        <div className="flex gap-2">
-                            <input
-                                className="flex-1 bg-gray-900 border border-gray-600 rounded p-2 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                                            {/* Diagnostics */}
+                                            {msg.diagnostics && msg.diagnostics.length > 0 && (
+                                                <div className="diagnostics">
+                                                    {msg.diagnostics.map((diag, i) => (
+                                                        <div
+                                                            key={i}
+                                                            className={`diagnostic diagnostic-${diag.severity?.toLowerCase() || 'info'}`}
+                                                        >
+                                                            <div className="diagnostic-icon">
+                                                                {diag.severity === 'Warning' ? '⚠️' :
+                                                                    diag.severity === 'Error' ? '❌' : 'ℹ️'}
+                                                            </div>
+                                                            <div className="diagnostic-content">
+                                                                <div className="diagnostic-kind">{diag.kind}</div>
+                                                                <div className="diagnostic-message">{diag.message}</div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <div ref={messagesEndRef} />
+                                </>
+                            )}
+                        </div>
+
+                        {/* Input */}
+                        <div className="input-container">
+                            <textarea
                                 value={input}
-                                onChange={e => setInput(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                                placeholder="Type a message..."
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                placeholder="Type your message..."
                                 disabled={isLoading}
+                                rows={3}
                             />
                             <button
-                                className="bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 onClick={sendMessage}
-                                disabled={isLoading}
+                                disabled={!input.trim() || isLoading}
+                                className="send-button"
                             >
-                                Send
+                                {isLoading ? '⏳ Analyzing...' : '↗ Send'}
                             </button>
                         </div>
                     </div>
-                </div>
-
-                {/* Right: Map Panel (70%) */}
-                <div className="flex-1 flex flex-col relative bg-gray-900">
-                    <div className="absolute top-4 right-4 z-10 flex flex-col items-end pointer-events-none">
-                        <div className="bg-gray-800/90 p-3 rounded-lg backdrop-blur-sm border border-gray-700 shadow-lg pointer-events-auto">
-                            <h2 className="font-bold text-sm text-gray-200 flex items-center gap-2">
-                                <span className="text-blue-400">◆</span> Meaning Graph
-                            </h2>
-                            <div className="text-[10px] text-gray-400 mt-1">
-                                Click nodes to trace context
+                ) : (
+                    <div className="graph-view-container">
+                        {graph ? (
+                            <>
+                                <div className="graph-stats">
+                                    <span>{graph.nodes?.length || 0} nodes</span>
+                                    <span>{graph.edges?.length || 0} edges</span>
+                                    <span>{graph.diagnostics?.length || 0} diagnostics</span>
+                                </div>
+                                <GraphView graph={graph} />
+                            </>
+                        ) : (
+                            <div className="empty-graph">
+                                <p>Send messages to build your knowledge map</p>
                             </div>
-                        </div>
-                        {/* Legend */}
-                        <div className="mt-2 bg-gray-800/80 p-2 rounded border border-gray-700/50 text-[10px] text-gray-400 pointer-events-auto">
-                            <div className="flex items-center gap-2 mb-1"><span className="w-2 h-2 rounded-full bg-blue-400"></span> Entity</div>
-                            <div className="flex items-center gap-2 mb-1"><span className="w-2 h-2 rounded-sm bg-yellow-400"></span> Event</div>
-                            <div className="flex items-center gap-2"><span className="w-2 h-2 rotate-45 bg-green-400"></span> Goal</div>
-                        </div>
+                        )}
                     </div>
-
-                    {graph ? (
-                        <GraphView graph={graph} onNodeClick={handleNodeClick} />
-                    ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
-                            <div className="text-4xl mb-4 opacity-20">🗺️</div>
-                            <p>Waiting for session data...</p>
-                        </div>
-                    )}
-                </div>
+                )}
             </div>
         </div>
     );
 };
-
-export default Dashboard;

@@ -64,5 +64,24 @@ export const api = {
     exportSession: async (sessionId: string, format: 'json' | 'markdown' = 'markdown') => {
         const response = await axios.get(`${API_BASE}/sessions/${sessionId}/export?format=${format}`);
         return response.data;
+    },
+
+    // Session-Aware Message Handling (NEW)
+    sendSessionMessage: async (sessionId: string, text: string, lang: string = 'en') => {
+        const response = await axios.post(`${API_BASE}/sessions/${sessionId}/messages`, {
+            text,
+            lang
+        });
+        return response.data;
+    },
+
+    getSessionMessages: async (sessionId: string) => {
+        const response = await axios.get(`${API_BASE}/sessions/${sessionId}/messages`);
+        return response.data;
+    },
+
+    getAccumulatedGraph: async (sessionId: string) => {
+        const response = await axios.get<MeaningGraph>(`${API_BASE}/sessions/${sessionId}/accumulated-graph`);
+        return response.data;
     }
 };
