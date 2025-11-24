@@ -48,6 +48,8 @@ export const Dashboard: React.FC = () => {
             // Send message to session-aware endpoint
             const response = await api.sendSessionMessage(sessionId, userMessage);
 
+            console.log('[Dashboard] API Response:', response);
+
             // Add message with diagnostics
             const newMessage: Message = {
                 id: response.message_id || Date.now().toString(),
@@ -60,10 +62,14 @@ export const Dashboard: React.FC = () => {
 
             // Update graph with accumulated state
             if (response.graph) {
+                console.log('[Dashboard] Setting graph:', response.graph);
                 setGraph(response.graph);
+            } else {
+                console.warn('[Dashboard] No graph in response');
             }
         } catch (e) {
             console.error('Error sending message:', e);
+            alert('Failed to send message. Check console for details.');
         } finally {
             setIsLoading(false);
         }
@@ -173,20 +179,30 @@ export const Dashboard: React.FC = () => {
                     </div>
                 ) : (
                     <div className="graph-view-container">
-                        {graph ? (
-                            <>
-                                <div className="graph-stats">
-                                    <span>{graph.nodes?.length || 0} nodes</span>
-                                    <span>{graph.edges?.length || 0} edges</span>
-                                    <span>{graph.diagnostics?.length || 0} diagnostics</span>
-                                </div>
-                                <GraphView graph={graph} />
-                            </>
-                        ) : (
-                            <div className="empty-graph">
-                                <p>Send messages to build your knowledge map</p>
-                            </div>
-                        )}
+                        {(() => {
+                            console.log('[Dashboard] Rendering graph view. Graph:', graph);
+                            if (graph) {
+                                return (
+                                    <>
+                                        <div className="graph-stats">
+                                            <span>{graph.nodes?.length || 0} nodes</span>
+                                            <span>{graph.edges?.length || 0} edges</span>
+                                            <span>{graph.diagnostics?.length || 0} diagnostics</span>
+                                        </div>
+                                        <GraphView graph={graph} />
+                                    </>
+                                );
+                            } else {
+                                return (
+                                    <div className="empty-graph">
+                                        <p>Send messages to build your knowledge map</p>
+                                        <p style={{ fontSize: '0.9rem', color: '#999', marginTop: '0.5rem' }}>
+                                            Try sending a message first, then switch to Map view
+                                        </p>
+                                    </div>
+                                );
+                            }
+                        })()}
                     </div>
                 )}
             </div>
