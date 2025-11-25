@@ -116,12 +116,16 @@ const GraphView: React.FC<GraphViewProps> = ({ graph, onNodeClick }) => {
             };
         });
 
-        const edges = graph.edges.map((e, i) => ({
-            data: { source: e.source, target: e.target, label: e.role, id: `e${i}` }
-        }));
+        // Filter edges to only include those where BOTH source and target exist in filteredNodes
+        const nodeIds = new Set(filteredNodes.map(n => n.id));
+        const edges = graph.edges
+            .filter(e => nodeIds.has(e.source) && nodeIds.has(e.target))
+            .map((e, i) => ({
+                data: { source: e.source, target: e.target, label: e.role, id: `e${i}` }
+            }));
 
         return [...nodes, ...edges];
-    }, [graph, layoutMode]);
+    }, [graph, layoutMode, viewLevel, nodeTypeFilter, searchTerm]);
 
     // Bind events
     useEffect(() => {

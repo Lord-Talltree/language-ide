@@ -37,6 +37,11 @@ class CrossMessageContradictionChecker:
             frozenset(['difficult', 'easy']),
             frozenset(['strong', 'weak']),
             frozenset(['light', 'heavy']),
+            frozenset(['lightweight', 'heavy']),  # Common in tech: "lightweight app" vs "heavy app"
+            frozenset(['simple', 'complex']),
+            frozenset(['simple', 'complicated']),
+            frozenset(['minimal', 'feature-rich']),
+            frozenset(['basic', 'advanced']),
             frozenset(['bright', 'dark']),
             frozenset(['clean', 'dirty']),
             frozenset(['new', 'old']),
